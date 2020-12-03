@@ -191,18 +191,18 @@ public class JavaHTTPServer implements Runnable{
 	
 	private void fileNotFound(PrintWriter out, OutputStream dataOut, String fileRequested) throws IOException {
 		
-		if ((!(fileRequested.endsWith("/")))&&!(fileRequested.endsWith(".html"))) // Fare redirect invece di dare il file diretto
+		if ((!(fileRequested.endsWith("/")))&&!(fileRequested.endsWith(".html"))) // Se non finisce con .html e non finisce con /
 		{
 			File file = new File(WEB_ROOT, PAGE_MOVED_PERMANENTLY);
 			int fileLength = (int) file.length();
 			String content = "text/html";
 			byte[] fileData = readFileData(file, fileLength);
-			out.println("HTTP/1.1 301 Moved Permanently");
+			out.println("HTTP/1.1 301 Moved Permanently"); // Errore 301
 			out.println("Server: Java HTTP Server from SSaurel : 1.0");
 			out.println("Date: " + new Date());
 			out.println("Content-type: " + content);
 			out.println("Content-length: " + fileLength);
-			out.println("Location: " + fileRequested + "/");
+			out.println("Location: " + fileRequested + "/"); // Invio nuova location, disponibile per ciccio
 			out.println(); // blank line between headers and content, very important !
 			out.flush(); // flush character output stream buffer
 			
