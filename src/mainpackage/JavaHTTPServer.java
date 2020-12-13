@@ -11,8 +11,20 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Date;
+import java.util.List;
 import java.util.StringTokenizer;
+
+import org.json.JSONObject;
+import org.json.XML;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 
 // The tutorial can be found just here on the SSaurel's Blog : 
 // https://www.ssaurel.com/blog/create-a-simple-http-web-server-in-java
@@ -37,7 +49,14 @@ public class JavaHTTPServer implements Runnable{
 		connect = c;
 	}
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
+		Path path = Paths.get("./puntiVendita.json");
+		String str = Files.readString(path, StandardCharsets.US_ASCII);
+		JSONObject json = new JSONObject(str);
+		String xml = XML.toString(json);
+		System.out.println(xml);
+		Path xmlpath = Paths.get("./puntivendita.xml");
+		Files.writeString(xmlpath, xml);
 		try {
 			ServerSocket serverConnect = new ServerSocket(PORT);
 			System.out.println("Server started.\nListening for connections on port : " + PORT + " ...\n");
@@ -118,25 +137,24 @@ public class JavaHTTPServer implements Runnable{
 				String content = getContentType(fileRequested);
 				
 				if (method.equals("GET")) { // GET method so we return content
-					byte[] fileData = readFileData(file, fileLength);
+						byte[] fileData = readFileData(file, fileLength);
+						
+						// send HTTP Headers
+						out.println("HTTP/1.1 200 OK");
+						out.println("Server: Java HTTP Server from SSaurel : 1.0");
+						out.println("Date: " + new Date());
+						out.println("Content-type: " + content);
+						out.println("Content-length: " + fileLength);
+						out.println(); // blank line between headers and content, very important !
+						out.flush(); // flush character output stream buffer
+						
+						dataOut.write(fileData, 0, fileLength);
+						dataOut.flush();
+					}
 					
-					// send HTTP Headers
-					out.println("HTTP/1.1 200 OK");
-					out.println("Server: Java HTTP Server from SSaurel : 1.0");
-					out.println("Date: " + new Date());
-					out.println("Content-type: " + content);
-					out.println("Content-length: " + fileLength);
-					out.println(); // blank line between headers and content, very important !
-					out.flush(); // flush character output stream buffer
-					
-					dataOut.write(fileData, 0, fileLength);
-					dataOut.flush();
-				}
-				
-				if (verbose) {
-					System.out.println("File " + fileRequested + " of type " + content + " returned");
-				}
-				
+					if (verbose) {
+						System.out.println("File " + fileRequested + " of type " + content + " returned");
+					}
 			}
 			
 		} catch (FileNotFoundException fnfe) {
