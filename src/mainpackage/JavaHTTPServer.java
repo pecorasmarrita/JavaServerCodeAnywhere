@@ -209,7 +209,7 @@ public class JavaHTTPServer implements Runnable{
 	
 	private void fileNotFound(PrintWriter out, OutputStream dataOut, String fileRequested) throws IOException {
 		
-		if ((!(fileRequested.endsWith("/")))&&!(fileRequested.endsWith(".html"))) // Se non finisce con .html e non finisce con /
+		if ( (!(fileRequested.endsWith("/")))&&!(fileRequested.endsWith(".html"))&&!(fileRequested.endsWith(".xml")) ) // Se non finisce con .html e non finisce con /
 		{
 			File file = new File(WEB_ROOT, PAGE_MOVED_PERMANENTLY);
 			int fileLength = (int) file.length();
