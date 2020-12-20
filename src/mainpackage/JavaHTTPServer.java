@@ -2,9 +2,11 @@ package mainpackage;
 
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -19,12 +21,14 @@ import java.util.Date;
 import java.util.List;
 import java.util.StringTokenizer;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.XML;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import java.sql.*;
 
 // The tutorial can be found just here on the SSaurel's Blog : 
 // https://www.ssaurel.com/blog/create-a-simple-http-web-server-in-java
@@ -50,13 +54,9 @@ public class JavaHTTPServer implements Runnable{
 	}
 	
 	public static void main(String[] args) throws IOException {
-		Path path = Paths.get("./puntiVendita.json");
-		String str = Files.readString(path, StandardCharsets.US_ASCII);
-		JSONObject json = new JSONObject(str);
-		String xml = XML.toString(json);
-		System.out.println(xml);
-		Path xmlpath = Paths.get("./puntivendita.xml");
-		Files.writeString(xmlpath, xml);
+		connectToDatabase ();
+		jsonToXML("./puntiVendita.json");
+		jsonToXML(".//db//cars.json");
 		try {
 			ServerSocket serverConnect = new ServerSocket(PORT);
 			System.out.println("Server started.\nListening for connections on port : " + PORT + " ...\n");
@@ -184,6 +184,101 @@ public class JavaHTTPServer implements Runnable{
 		
 	}
 	
+	private static void jsonToXML (String filejson) throws IOException
+	{
+		Path path = Paths.get(filejson);
+		String str = Files.readString(path, StandardCharsets.US_ASCII);
+		JSONObject json = new JSONObject(str);
+		String xml = XML.toString(json);
+		System.out.println(xml);
+		filejson = filejson.replace(".json", ".xml");
+		Path xmlpath = Paths.get(filejson);
+		Files.writeString(xmlpath, xml);
+	}
+	
+	private static void connectToDatabase ()
+	{	
+		JSONObject mainObj = null;
+		Car car = new Car(); // nuova istanza oggetto car
+        String mySQLDriver = "com.mysql.cj.jdbc.Driver"; // selezione driver aggiornato
+        
+        try
+        {
+            Class.forName(mySQLDriver);
+        }
+        catch (ClassNotFoundException e)
+        {
+            System.out.println("Driver not found " + e);
+            System.exit(0);
+        }
+        // jdbc:mysql://indirizzo/schema?[args]
+        String url_db = "jdbc:mysql://localhost:3306/cars?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC";
+        // query per marca e modello dalla table car_table
+        String query = "SELECT marca, modello FROM car_table";
+        System.out.println("Connettendo presso: " + url_db); // output per tentativo di connessione con db
+        Connection connection = null; // inizializzazione variabile
+        
+        try
+        {
+            connection = DriverManager.getConnection(url_db, "root", "root"); // connessione a url tramite user e password
+        }
+        catch (Exception e)
+        {
+            System.out.println("Errore durante la connessione: " + e);
+            System.exit(0);
+        }
+        
+        try
+        {
+            Statement statement = connection.createStatement(); // creazione statement
+            ResultSet resultset = statement.executeQuery(query); // query presso database
+            mainObj = new JSONObject();
+    		ObjectMapper Obj = new ObjectMapper();
+    		JSONArray ja = new JSONArray();
+            while(resultset.next())
+            {
+            	JSONObject jo = new JSONObject();
+            	car.setMarca (resultset.getString(1));
+            	car.setModello (resultset.getString(2));
+                System.out.println("Risultati");
+                System.out.println("Marca: " + car.getMarca());
+                System.out.println("Modello: " + car.getModello());
+                //String jsonStr = Obj.writeValueAsString(car);
+                //System.out.println(jsonStr);
+                //ja.put(jsonStr);
+                jo.put("marca", car.getMarca());
+                jo.put("modello", car.getModello());
+                ja.put(jo);
+                mainObj.put("cars", ja);
+                System.out.println(mainObj);
+            }
+            FileWriter fw = new FileWriter(".\\db\\cars.json", false);
+            BufferedWriter bw = new BufferedWriter(fw);
+            PrintWriter output = new PrintWriter(bw);
+        	output.println(mainObj);
+        	output.close();
+        }
+        catch(Exception e)
+        {
+            System.out.println("Eccezione: " + e);
+            System.exit(0);
+        }
+        finally
+        {
+            if(connection != null)
+            {
+                try
+                {
+                    connection.close();
+                }
+                catch(Exception e)
+                {
+                    System.out.println("Errore durante chiusura connessione: " + e);
+                }
+            }
+        }
+	}
+	
 	private byte[] readFileData(File file, int fileLength) throws IOException {
 		FileInputStream fileIn = null;
 		byte[] fileData = new byte[fileLength];
@@ -203,13 +298,15 @@ public class JavaHTTPServer implements Runnable{
 	private String getContentType(String fileRequested) {
 		if (fileRequested.endsWith(".htm")  ||  fileRequested.endsWith(".html"))
 			return "text/html";
+		else if (fileRequested.endsWith(".json"))
+			return "application/json";
 		else
 			return "text/plain";
 	}
 	
 	private void fileNotFound(PrintWriter out, OutputStream dataOut, String fileRequested) throws IOException {
 		
-		if ( (!(fileRequested.endsWith("/")))&&!(fileRequested.endsWith(".html"))&&!(fileRequested.endsWith(".xml")) ) // Se non finisce con .html e non finisce con /
+		if ( (!(fileRequested.endsWith("/")))&&!(fileRequested.endsWith(".html"))&&!(fileRequested.endsWith(".xml"))&&!(fileRequested.endsWith(".json")) ) // Se non finisce con .html e non finisce con /
 		{
 			File file = new File(WEB_ROOT, PAGE_MOVED_PERMANENTLY);
 			int fileLength = (int) file.length();
