@@ -41,7 +41,7 @@ public class JavaHTTPServer implements Runnable{
 	static final String PAGE_MOVED_PERMANENTLY = "ciccio.html";
 	static final String METHOD_NOT_SUPPORTED = "not_supported.html";
 	// port to listen connection
-	static final int PORT = 8080;
+	static final int PORT = 3000;
 	
 	// verbose mode
 	static final boolean verbose = true;
